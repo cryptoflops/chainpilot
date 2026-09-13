@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChainPilot: Autonomous EVM Triage Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0B0F17; --surface:#0f1522; --surface2:#131b2c; --line:#1e2a40; --line2:#25334e;
+  --ink:#e8edf6; --sub:#8a97ad; --faint:#5a6778;
+  --em:#10B981; --em2:#34D399; --cyan:#22D3EE; --cyd:#0E7490; --blue:#3B82F6; --amber:#FBBF24;
+  --mono:'JetBrains Mono',ui-monospace,Menlo,monospace;
+--disp:'Outfit',Inter,system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:radial-gradient(1200px 800px at 85% -10%, rgba(6,182,212,.07), transparent 60%),
+ radial-gradient(1000px 700px at -10% 110%, rgba(16,185,129,.08), transparent 55%), var(--void);
+ color:var(--ink);font-family:Inter,system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column}
+/* ---------- header ---------- */
+header{height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;
+ border-bottom:1px solid var(--line);backdrop-filter:blur(8px);position:sticky;top:0;z-index:50;background:rgba(11,15,23,.75)}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.35);
+ display:flex;align-items:center;justify-content:center;font:700 14px var(--mono);color:var(--em2)}
+.brand h1{font-family:var(--disp);font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px}
+.tagline{font:400 11px var(--mono);color:var(--sub)}
+.vpill{font:600 9px var(--mono);text-transform:uppercase;padding:2px 8px;border-radius:99px;
+ background:rgba(34,211,238,.1);color:var(--cyan);border:1px solid rgba(34,211,238,.3)}
+.hstats{display:flex;align-items:center;gap:10px;font:500 11px var(--mono);color:var(--sub)}
+.hsrc{color:var(--cyan);text-decoration:none;font:600 10px var(--mono);letter-spacing:.16em;text-transform:uppercase}
+.hsrc:hover{text-decoration:underline}
+.chip{display:flex;align-items:center;gap:7px;background:var(--surface);border:1px solid var(--line);
+ padding:6px 12px;border-radius:9px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint)}
+.dot.on{background:var(--em2);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* ---------- hero (Zyloch: radar rings, outline type, cyan mono chrome) ---------- */
+.hero{position:relative;max-width:1800px;margin:0 auto;padding:64px 24px 30px;overflow:hidden}
+.radar{position:absolute;right:3%;top:50%;transform:translateY(-50%);width:clamp(280px,34vw,520px);aspect-ratio:1;pointer-events:none;flex:none}
+.radar .rings{position:absolute;inset:0;border-radius:50%;
+ background:radial-gradient(circle at 50% 50%, transparent 0 15%, rgba(34,211,238,.09) 15.3% 15.6%,
+   transparent 15.6% 31%, rgba(34,211,238,.09) 31.3% 31.6%, transparent 31.6% 47%,
+   rgba(34,211,238,.09) 47.3% 47.6%, transparent 47.6% 63%, rgba(34,211,238,.08) 63.3% 63.6%,
+   transparent 63.6% 79%, rgba(34,211,238,.07) 79.3% 79.6%, transparent 79.6% 100%);
+ mask-image:radial-gradient(circle at 50% 50%, #000 30%, transparent 72%)}
+.radar .glow{position:absolute;inset:0;border-radius:50%;
+ background:radial-gradient(circle at 50% 50%, rgba(34,211,238,.14), rgba(34,211,238,.05) 38%, transparent 68%)}
+.radar .hole{position:absolute;left:50%;top:50%;width:17%;height:17%;transform:translate(-50%,-50%);
+ border-radius:50%;background:#070b12;box-shadow:0 0 0 1px rgba(34,211,238,.18), 0 0 44px rgba(34,211,238,.10) inset}
+.radar .sweep{position:absolute;inset:0;border-radius:50%;
+ background:conic-gradient(from 0deg, rgba(34,211,238,.16), transparent 70deg, transparent 360deg);
+ mask-image:radial-gradient(circle at 50% 50%, #000 20%, transparent 72%);
+ animation:radar 9s linear infinite}
+@keyframes radar{to{transform:rotate(360deg)}}
+.hero .eyebrow{display:inline-block;font:600 11px var(--mono);letter-spacing:.22em;color:var(--cyan);
+ text-transform:uppercase}
+.hero h2{font-family:var(--disp);font-size:clamp(38px,5.6vw,68px);font-weight:800;letter-spacing:-.03em;
+ line-height:1.02;margin:16px 0 0;max-width:26ch}
+.hero h2 .outline{color:transparent;-webkit-text-stroke:1.5px rgba(232,237,246,.5)}
+.hero h2 .cy{color:var(--cyan)}
+.hero p{font-size:15.5px;line-height:1.6;color:var(--sub);max-width:58ch;margin:16px 0 0}
+.hero .ctas{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap;align-items:center}
+.cta-a{font:600 13px Inter;padding:12px 22px;border-radius:8px;border:none;cursor:pointer;
+ background:var(--cyan);color:#04141a;box-shadow:0 0 34px rgba(34,211,238,.25)}
+.cta-a:hover{background:#53e2f7}
+.cta-a .arr{font-family:var(--mono)}
+.cta-b{font:600 11px var(--mono);letter-spacing:.14em;text-transform:uppercase;padding:12px 18px;border-radius:8px;
+ cursor:pointer;text-decoration:none;background:transparent;border:1px solid var(--line2);color:var(--sub)}
+.cta-b:hover{color:var(--cyan);border-color:rgba(34,211,238,.45)}
+.ticker{display:flex;gap:0;margin-top:34px;border-top:1px solid var(--line);padding-top:0;overflow:hidden}
+.ticker span{font:500 10.5px var(--mono);letter-spacing:.18em;color:var(--faint);text-transform:uppercase;
+ padding:12px 26px;border-right:1px solid var(--line);white-space:nowrap}
+.ticker span::before{content:"";display:inline-block;width:5px;height:5px;border-radius:50%;
+ background:rgba(34,211,238,.5);margin-right:10px;vertical-align:1px}
+@media (prefers-reduced-motion: reduce){.radar .sweep{animation:none}}
+@media (max-width:1100px){.radar{right:2%;width:40vw;opacity:.55}}
+@media (max-width:700px){
+ .radar{right:auto;left:50%;top:10%;transform:translateX(-50%);width:88vw;opacity:.22}
+ .hero{padding:44px 18px 24px}
+ .hero h2{font-size:clamp(30px,9vw,44px)}
+ .ticker{flex-wrap:wrap}
+ .ticker span{border-right:none;padding:8px 14px}
+ .hstats .chip{display:none}
+}
+
+/* ---------- layout ---------- */
+main{flex:1;display:grid;grid-template-columns:300px 1fr 380px;gap:16px;padding:16px 24px;max-width:1800px;width:100%;margin:0 auto}
+.panel{background:rgba(15,21,34,.8);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(10px);
+ display:flex;flex-direction:column;overflow:hidden}
+.phead{padding:12px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;background:rgba(19,27,44,.5)}
+.ptitle{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.ico{width:14px;height:14px;flex:none}
+.runbtn .ico{width:15px;height:15px}
+.dl .ico{width:11px;height:11px;vertical-align:-1px}
+.psub{font:500 10px var(--mono);color:var(--sub)}
+.pbody{padding:14px;overflow-y:auto;flex:1}
+/* ---------- left column ---------- */
+aside{display:flex;flex-direction:column;gap:16px}
+label{display:block;font:600 11px var(--mono);letter-spacing:.2px;color:var(--sub);margin-bottom:6px}
+input,textarea{width:100%;background:rgba(11,15,23,.9);border:1px solid var(--line2);border-radius:10px;
+ color:var(--em2);font:500 12px var(--mono);padding:9px 11px;outline:none;transition:.15s}
+input:focus,textarea:focus{border-color:rgba(34,211,238,.55);box-shadow:0 0 0 3px rgba(34,211,238,.14)}
+textarea{color:var(--ink);resize:vertical;min-height:56px;font-size:11.5px;line-height:1.5}
+.presets{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+.pbtn{font:500 10.5px var(--mono);padding:5px 10px;border-radius:7px;background:var(--surface2);
+ border:1px solid var(--line2);color:var(--sub);cursor:pointer;transition:.15s}
+.pbtn:hover{color:var(--ink);border-color:var(--em);background:rgba(16,185,129,.08)}
+.runbtn{margin-top:14px;width:100%;padding:12px;border:none;border-radius:10px;cursor:pointer;
+ font:700 13px Inter;background:var(--cyan);color:#04141a;
+ box-shadow:0 8px 28px rgba(34,211,238,.22);transition:.15s;display:flex;align-items:center;justify-content:center;gap:8px}
+.runbtn:hover{filter:brightness(1.12)} .runbtn:disabled{opacity:.55;cursor:wait;filter:none}
+.spinner{width:14px;height:14px;border:2px solid rgba(4,33,26,.3);border-top-color:#04211a;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.guard{display:flex;flex-direction:column;gap:9px}
+.guard li{list-style:none;font:500 11px Inter;color:var(--sub);display:flex;gap:8px;align-items:flex-start}
+.guard .ok{color:var(--em2);font-weight:700}
+.guard .ok::before{content:"\2713"}
+.verify::before{content:"\2713 ";color:var(--em2)}
+
+
+/* ---------- address tools + reset ---------- */
+.addr-tools{display:flex;gap:8px;align-items:center;margin-top:8px;min-height:22px}
+.mini{font:500 10.5px var(--mono);color:var(--sub);background:var(--surface2);border:1px solid var(--line2);
+ border-radius:6px;padding:3px 9px;cursor:pointer;text-decoration:none;transition:.15s}
+.mini:hover{color:var(--cyan);border-color:rgba(34,211,238,.4)}
+.mini.err{color:var(--amber);border-color:rgba(251,191,36,.4);background:rgba(251,191,36,.06);cursor:default}
+.resetbtn{font:600 11px Inter;padding:9px 14px;border-radius:9px;background:transparent;color:var(--sub);
+ border:1px solid var(--line2);cursor:pointer;flex:none}
+.resetbtn:hover{color:var(--ink);border-color:var(--faint)}
+.run-wrap{display:flex;gap:8px;margin-top:14px}
+.run-wrap .runbtn{margin-top:0}
+/* ---------- Zyloch/3118 adaptations: posture chips, terminal chrome, scan sweep ---------- */
+.posture{display:flex;gap:8px;margin-top:20px;flex-wrap:wrap}
+.pchip{display:flex;align-items:center;gap:7px;font:500 11px Inter;color:var(--sub);
+ background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:6px 12px}
+.pchip b{color:var(--em2);font-weight:600}
+.tdots{display:flex;gap:5px;margin-right:9px}
+.tdots i{width:8px;height:8px;border-radius:50%;background:var(--line2)}
+.tdots i:first-child{background:#f9731655}.tdots i:nth-child(2){background:#fbbf2455}.tdots i:nth-child(3){background:#34d39955}
+#pipeline{position:relative}
+#pipeline.scanning::after{content:"";position:absolute;left:0;right:0;top:0;height:120px;pointer-events:none;
+ background:linear-gradient(180deg,transparent,rgba(34,211,238,.06) 45%,rgba(34,211,238,.14) 50%,rgba(34,211,238,.06) 55%,transparent);
+ animation:scan 1.6s cubic-bezier(.4,0,.6,1) infinite}
+@keyframes scan{0%{transform:translateY(-130px)}100%{transform:translateY(760px)}}
+@media (prefers-reduced-motion: reduce){#pipeline.scanning::after{animation:none;opacity:.35;height:100%}}
+/* ---------- center: pipeline ---------- */
+#pipeline{display:flex;flex-direction:column;gap:10px}
+.tcard{background:rgba(11,15,23,.75);border:1px solid var(--line);border-radius:12px;padding:10px 12px;
+ animation:slidein .25s ease-out}
+@keyframes slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.tcard.pending{border-color:rgba(34,211,238,.55);box-shadow:0 0 0 3px rgba(34,211,238,.1)}
+.tcard.done .tstatus::after{content:"ok";color:var(--em2)}
+.tcard.err{border-color:rgba(251,191,36,.4)}
+.tcard.err .tstatus::after{content:"no data";color:var(--amber)}
+.ttop{display:flex;justify-content:space-between;align-items:center}
+.tname{font:700 12px var(--mono)}
+.tname.getcode{color:var(--em2)} .tname.call{color:#7fb3ff} .tname.file{color:var(--em2)}
+.tstatus{font:500 9.5px var(--mono);color:var(--sub)}
+.targs{font:400 10.5px var(--mono);color:var(--sub);margin-top:5px;word-break:break-all;line-height:1.45}
+.tres{font:400 10.5px var(--mono);margin-top:6px;padding:6px 8px;border-radius:7px;background:rgba(19,27,44,.8);
+ border:1px solid var(--line);color:#b9c6dd;word-break:break-all;line-height:1.5}
+.thex{color:#6f81a3;font-size:9.5px}
+#agentlog{margin-top:12px;border-top:1px dashed var(--line2);padding-top:10px}
+#agentlog pre{font:400 11.5px/1.65 var(--mono);color:#c3d0e6;white-space:pre-wrap}
+#agentlog pre::after{content:"▋";color:var(--em2);animation:blink 1s infinite}
+@keyframes blink{50%{opacity:0}}
+#loglabel{font:600 11px var(--mono);color:var(--sub);letter-spacing:.2px}
+.empty{color:var(--faint);font:400 11.5px var(--mono);padding:24px 6px;text-align:center}
+/* ---------- right: dossier ---------- */
+#dossier .empty{padding:40px 10px}
+.md{font-size:12px;line-height:1.65;color:#c9d4e6}
+.md h1{font-size:15px;margin:10px 0 6px;color:var(--ink)}
+.md h2{font-size:13px;margin:12px 0 5px;color:var(--ink);border-bottom:1px solid var(--line);padding-bottom:4px}
+.md li{margin-left:16px;margin-top:3px}
+.md code{font:500 10.5px var(--mono);background:rgba(19,27,44,.9);border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:var(--em2);word-break:break-all}
+.md b{color:var(--ink)}
+.hexblock{margin-top:10px;font:400 9.5px var(--mono);color:#6f81a3;word-break:break-all;background:rgba(11,15,23,.8);
+ border:1px solid var(--line);border-radius:9px;padding:8px 10px;max-height:150px;overflow:auto;display:none}
+.hexblock.show{display:block}
+.dl{margin-top:10px;font:600 10.5px var(--mono);padding:7px 12px;border-radius:8px;background:rgba(16,185,129,.1);
+ border:1px solid rgba(16,185,129,.35);color:var(--em2);cursor:pointer;visibility:hidden}
+.dl.show{visibility:visible}
+.verify{display:none;align-items:center;gap:6px;font:600 10px var(--mono);color:var(--em2);
+ background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);padding:4px 10px;border-radius:99px}
+.verify.show{display:inline-flex}
+footer{padding:10px 24px;border-top:1px solid var(--line);font:400 10.5px Inter;color:var(--faint);text-align:center}
+footer a{color:#7fb3ff;text-decoration:none}
+@media (prefers-reduced-motion: reduce){
+ *{animation:none!important;transition:none!important}
+ .tcard{animation:none}
+}
+@media(max-width:1200px){main{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="logo">CP</div>
+    <div>
+      <h1>ChainPilot <span class="vpill">v1.0 live</span></h1>
+      <div class="tagline">Autonomous EVM Triage · AWS Strands Agents SDK</div>
+    </div>
+  </div>
+  <div class="hstats">
+    <div class="chip"><span class="dot" id="rpc-dot"></span><span id="rpc-host">RPC idle</span></div>
+    <div class="chip"><span id="pass-count">0</span>&nbsp;tool passes</div>
+    <div class="chip">loop&nbsp;<span id="loop-time">0.0s</span></div>
+    <a class="hsrc" href="https://github.com/cryptoflops/chainpilot" target="_blank" rel="noopener">view source &#8599;</a>
+  </div>
+</header>
+
+
+<section class="hero">
+  <div class="radar"><div class="glow"></div><div class="rings"></div><div class="sweep"></div><div class="hole"></div></div>
+  <span class="eyebrow">Autonomous code posture for EVM</span>
+  <h2><span class="outline">47 addresses.</span><br><span class="outline">30 clerical minutes.</span><br><span class="cy">Zero</span> of them yours.</h2>
+  <p>ChainPilot is an autonomous EVM triage agent on the AWS Strands Agents SDK. It reads live Ethereum mainnet over permissionless public RPC, decodes every value with the raw hex kept as proof, and writes the triage note below.</p>
+  <div class="ctas">
+    <button class="cta-a" id="hero-cta">Triage a contract <span class="arr">&#8599;</span></button>
+    <a class="cta-b" href="https://github.com/cryptoflops/chainpilot" target="_blank" rel="noopener">View source</a>
+  </div>
+  <div class="ticker">
+    <span>Read-only</span><span>0 chain keys</span><span>Strands SDK</span><span>Hex-auditable</span><span>Public RPC</span><span>MIT</span>
+  </div>
+</section>
+
+<main>
+  <aside>
+    <section class="panel">
+      <div class="phead"><span class="ptitle"><svg class="ico " xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <circle cx="12" cy="12" r="10" /> <circle cx="12" cy="12" r="6" /> <circle cx="12" cy="12" r="2" /> </svg>Target contract</span></div>
+      <div class="pbody">
+        <label for="addr-input">Address</label>
+        <input id="addr-input" spellcheck="false" placeholder="0x…" autocomplete="off">
+        <div class="addr-tools">
+          <button class="mini" id="copy-addr" tabindex="-1">Copy</button>
+          <a class="mini" id="esc-addr" href="#" target="_blank" rel="noopener">Etherscan</a>
+          <span class="mini err" id="addr-err" hidden>Needs a 0x address, 40 hex chars</span>
+        </div>
+        <div class="presets">
+          <button class="pbtn" data-addr="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2">WETH</button>
+          <button class="pbtn" data-addr="0x6B175474E89094C44Da98b954EedeAC495271d0F">DAI</button>
+          <button class="pbtn" data-addr="0x0000000000000000000000000000000000000001">empty addr</button>
+          <button class="pbtn" data-addr="0x5d3a536E4D6DbD6114cc1Ead35777bAB948E3643" data-note="Also read storage slot 2 (0x2) with eth_get_storage_at and decode what is packed there.">cDAI + slot read</button>
+        </div>
+        <div style="margin-top:12px">
+          <label for="prompt-input">Extra instructions (optional)</label>
+          <textarea id="prompt-input" placeholder="e.g. also check decimals()"></textarea>
+        </div>
+        <div class="run-wrap">
+          <button class="runbtn" id="run-btn"><svg class="ico " xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z" /> </svg>Run autonomous triage</button>
+          <button class="resetbtn" id="reset-btn" title="Clear console state">Reset</button>
+        </div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="phead"><span class="ptitle"><svg class="ico " xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" /> <path d="m9 12 2 2 4-4" /> </svg>Guardrails</span></div>
+      <div class="pbody">
+        <ul class="guard">
+          <li><span class="ok"></span>Permissionless public JSON-RPC, zero chain API keys</li>
+          <li><span class="ok"></span>Read-only: zero spending authority by design</li>
+          <li><span class="ok"></span>Every claim is a tool result; system prompt bans fabrication</li>
+          <li><span class="ok"></span>Raw hex preserved beside every decoded value</li>
+        </ul>
+      </div>
+    </section>
+  </aside>
+
+  <section class="panel">
+    <div class="phead">
+      <span class="ptitle"><span class="tdots"><i></i><i></i><i></i></span><svg class="ico " xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M19.07 4.93A10 10 0 0 0 6.99 3.34" /> <path d="M4 6h.01" /> <path d="M2.29 9.62A10 10 0 1 0 21.31 8.35" /> <path d="M16.24 7.76A6 6 0 1 0 8.23 16.67" /> <path d="M12 18h.01" /> <path d="M17.99 11.66A6 6 0 0 1 15.77 16.67" /> <circle cx="12" cy="12" r="2" /> <path d="m13.41 10.59 5.66-5.66" /> </svg>Live agent pipeline</span>
+      <span class="psub" id="pipeline-sub">strands event loop</span>
+    </div>
+    <div class="pbody">
+      <div id="pipeline"><div class="empty">Run a triage to watch the agent plan, dispatch RPCs, decode ABI and write the dossier, live.</div></div>
+      <div id="agentlog" style="display:none">
+        <div id="loglabel">Agent narration</div>
+        <pre id="logtext"></pre>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="dossier">
+    <div class="phead">
+      <span class="ptitle"><svg class="ico " xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" /> <path d="M14 2v4a2 2 0 0 0 2 2h4" /> <path d="M10 9H8" /> <path d="M16 13H8" /> <path d="M16 17H8" /> </svg>Artifact · triage_note.md</span>
+      <span class="verify" id="verify-badge">read-back verified</span>
+    </div>
+    <div class="pbody">
+      <div id="md-view"><div class="empty">No artifact yet. When the agent writes and re-reads the file, it renders here.</div></div>
+      <div class="hexblock" id="hex-block"></div>
+      <button class="dl" id="dl-btn"><svg class="ico " xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" > <path d="M12 15V3" /> <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /> <path d="m7 10 5 5 5-5" /> </svg>Download triage_note.md</button>
+    </div>
+  </section>
+</main>
+
+<footer>Built for <a href="https://agentsforhumans.devpost.com/" target="_blank">Agents for Humans</a>. Strands Agents SDK, live mainnet reads via public RPC. <a href="https://github.com/cryptoflops/chainpilot" target="_blank">github.com/cryptoflops/chainpilot</a></footer>
+
+<script>
+const $ = id => document.getElementById(id);
+const RUN_LABEL = document.getElementById('run-btn').innerHTML;
+const addrInput=$('addr-input'), noteInput=$('prompt-input'), runBtn=$('run-btn');
+const pipeline=$('pipeline'), logwrap=$('agentlog'), logtext=$('logtext');
+const mdView=$('md-view'), hexBlock=$('hex-block'), dlBtn=$('dl-btn'), verify=$('verify-badge');
+const rpcHost=$('rpc-host'), rpcDot=$('rpc-dot'), passCount=$('pass-count'), loopTime=$('loop-time');
+let cards={}, passes=0, t0=null, tickTimer=null, lastArtifact=null;
+
+document.getElementById('hero-cta').addEventListener('click', () => {
+  document.querySelector('main').scrollIntoView({behavior:'smooth'});
+  addrInput.focus();
+});
+const addrErr=$('addr-err'), copyAddr=$('copy-addr'), escAddr=$('esc-addr'), pipeSub=$('pipeline-sub');
+const addrOk = v => /^0x[0-9a-fA-F]{40}$/.test(v);
+function syncAddr(){
+  const v=(addrInput.value||'').trim();
+  const ok=addrOk(v);
+  copyAddr.style.display=escAddr.style.display=ok?'':'none';
+  addrErr.hidden=!v||ok;
+  if(ok) escAddr.href='https://etherscan.io/address/'+v;
+}
+addrInput.addEventListener('input', syncAddr); syncAddr();
+copyAddr.addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText(addrInput.value.trim()); copyAddr.textContent='Copied'; }
+  catch { copyAddr.textContent='Ctrl+C to copy'; }
+  setTimeout(()=>copyAddr.textContent='Copy', 1400);
+});
+document.getElementById('reset-btn').addEventListener('click', () => {
+  if(runBtn.disabled) return;
+  pipeline.innerHTML='<div class="empty">Run a triage to watch the agent plan, dispatch RPCs, decode ABI and write the dossier, live.</div>';
+  logtext.textContent=''; logwrap.style.display='none';
+  mdView.innerHTML='<div class="empty">No artifact yet. When the agent writes and re-reads the file, it renders here.</div>';
+  hexBlock.className='hexblock'; verify.className='verify'; dlBtn.className='dl';
+  passCount.textContent='0'; loopTime.textContent='0.0s'; rpcHost.textContent='RPC idle'; rpcDot.className='dot';
+  pipeSub.textContent='strands event loop';
+});
+let presetNote='';
+document.querySelectorAll('.pbtn').forEach(b=>b.addEventListener('click',()=>{addrInput.value=b.dataset.addr;presetNote=b.dataset.note||'';syncAddr();}));
+
+function composePrompt(){
+  const a=(addrInput.value||'').trim();
+  const extra=noteInput.value.trim();
+  if(!a) return null;
+  let p;
+  if(/^0x0+$/.test(a)) p=`Check ${a} with eth_get_code and report whether it is a contract or an empty address. No files needed.`;
+  else p=`Triage ${a}: verify it's a contract with eth_get_code, read name() 0x06fdde03 and totalSupply() 0x18160ddd via eth_call, decode them, and write triage_note.md with the decoded findings and raw hex.`;
+  if(extra) p+=` ${extra}`; else if(presetNote) p+=` ${presetNote}`;
+  return p;
+}
+
+runBtn.addEventListener('click', async ()=>{
+  const prompt=composePrompt();
+  if(!prompt){addrInput.focus();addrErr.hidden=false;return;}
+  runBtn.disabled=true; runBtn.innerHTML='<div class="spinner"></div><span>Agent running…</span>';
+  pipeline.innerHTML=''; cards={}; passes=0; logtext.textContent=''; logwrap.style.display='none';
+  mdView.innerHTML='<div class="empty">Agent is working…</div>'; hexBlock.className='hexblock'; verify.className='verify';
+  dlBtn.className='dl'; rpcHost.textContent='RPC connecting…'; rpcDot.className='dot on'; pipeline.classList.add('scanning');
+  t0=performance.now(); loopTime.textContent='0.0s';
+  tickTimer=setInterval(()=>{loopTime.textContent=((performance.now()-t0)/1000).toFixed(1)+'s';},100);
+  try{
+    const res=await fetch('/run/stream',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt})});
+    if(!res.ok) throw new Error(await res.text());
+    const rd=res.body.getReader(), dec=new TextDecoder(); let buf='';
+    while(true){
+      const {done,value}=await rd.read(); if(done) break;
+      buf+=dec.decode(value,{stream:true});
+      const chunks=buf.split('\n\n'); buf=chunks.pop();
+      for(const c of chunks) if(c.startsWith('data: ')) handle(JSON.parse(c.slice(6)));
+    }
+  }catch(e){
+    addCard('error',{tool:'error'}); cardResult('error', String(e.message||e), true);
+  }finally{
+    clearInterval(tickTimer); loopTime.textContent=((performance.now()-t0)/1000).toFixed(1)+'s';
+    runBtn.disabled=false; runBtn.innerHTML=RUN_LABEL; rpcDot.className='dot'; pipeline.classList.remove('scanning');
+  }
+});
+
+function handle(m){
+  if(m.type==='tool_call'){
+    passes++; passCount.textContent=passes; pipeSub.textContent='running '+m.tool;
+    addCard(m.tool, m);
+  }else if(m.type==='tool_result'){
+    cardResult(m.tool, m.content, /"error"|all RPCs unreachable/.test(m.content));
+    const host=/publicnode/.test(m.content)?'publicnode.com':/llamarpc/.test(m.content)?'llamarpc.com':null;
+    if(host) rpcHost.textContent='RPC: '+host;
+  }else if(m.type==='delta'){
+    logwrap.style.display='block'; logtext.textContent+=m.text;
+    logwrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }else if(m.type==='final'){
+    if(m.artifact){
+      renderMd(m.artifact); lastArtifact=m.artifact;
+      hexBlock.textContent=extractHex(m.artifact); hexBlock.className='hexblock show';
+      verify.className='verify show'; dlBtn.className='dl show';
+    }
+  }
+}
+
+let uid=0; const seen=[];
+function addCard(tool,m){
+  const id=tool+'_'+(++uid);
+  const cls = tool==='eth_get_code'?'getcode':tool==='eth_call'?'call':'file';
+  const el=document.createElement('div'); el.className='tcard pending'; el.id=id;
+  el.innerHTML=`<div class="ttop"><span class="tname ${cls}">${tool}</span><span class="tstatus">dispatching…</span></div>
+  <div class="targs">${m.args||''}</div>`;
+  pipeline.appendChild(el);
+  (seen[tool]=seen[tool]||[]).push(id);
+  pipeline.parentElement.scrollTop=pipeline.parentElement.scrollHeight;
+}
+function cardResult(tool,content,isErr){
+  const q=seen[tool]; if(!q||!q.length) return;
+  const el=document.getElementById(q.shift()); if(!el) return;
+  el.classList.remove('pending'); el.classList.add(isErr?'err':'done');
+  el.querySelector('.tstatus').textContent='';
+  const hex=(content.match(/0x[0-9a-fA-F]{20,}/)||[''])[0];
+  const short=content.replace(/0x[0-9a-fA-F]{20,}/g,h=>'…');
+  el.insertAdjacentHTML('beforeend',
+   `<div class="tres">${short.slice(0,160)}${hex?`<div class="thex">${hex.slice(0,74)}${hex.length>74?'…':''}</div>`:''}</div>`);
+}
+
+dlBtn.addEventListener('click',()=>{
+  const b=new Blob([lastArtifact||''],{type:'text/markdown'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='triage_note.md'; a.click();
+});
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function renderMd(src){
+  let h=esc(src);
+  h=h.replace(/^### (.*)$/gm,'<h1>$1</h1>').replace(/^## (.*)$/gm,'<h2>$1</h2>').replace(/^# (.*)$/gm,'<h2>$1</h2>');
+  h=h.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  h=h.replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>');
+  h=h.replace(/^- (.*)$/gm,'<li>$1</li>').replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g,'<ul>$1</ul>');
+  h=h.replace(/\n{2,}/g,'<br><br>').replace(/\n/g,'<br>');
+  mdView.innerHTML=`<div class="md">${h}</div>`;
+}
+function extractHex(md){
+  return (md.match(/0x[0-9a-fA-F]{24,}/g)||[]).slice(0,6).join('\n');
+}
+</script>
+</body>
+</html>
